@@ -64,7 +64,8 @@
       <div class="grid grid-2" style="gap:56px; align-items:start;">
 
         <div class="reveal">
-          <form data-demo-form class="card" style="padding:40px;">
+          <form data-contact-form class="card" style="padding:40px;" novalidate>
+            <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
             <div class="grid grid-2">
               <div class="form-field">
                 <label for="c-name">Nombre completo</label>
@@ -101,7 +102,7 @@
               <textarea id="c-message" name="message" rows="5" required></textarea>
             </div>
             <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Enviar mensaje</button>
-            <p class="form-note text-center">Formulario de demostración — conectar a un backend, Formspree o CRM antes de publicar.</p>
+            <p class="form-status text-center" role="status" aria-live="polite"></p>
           </form>
         </div>
 

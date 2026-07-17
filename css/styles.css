@@ -280,6 +280,10 @@ section { padding: 96px 0; }
 }
 .form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline: none; border-color: var(--gold); }
 .form-note { font-size: 0.82rem; color: var(--gray-500); margin-top: 12px; }
+.form-status { font-size: 0.9rem; font-weight: 600; margin-top: 16px; min-height: 1.2em; }
+.form-status-success { color: #2f6d4f; }
+.form-status-error { color: #a6403a; }
+.hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 /* ---------- Filters (Blog) ---------- */
 .filter-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 40px; }

@@ -73,4 +73,53 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => (btn.textContent = original), 2500);
     });
   });
+
+  // Formulario de contacto real (Vercel Function + Resend)
+  const contactForm = document.querySelector('form[data-contact-form]');
+  if (contactForm) {
+    const statusEl = contactForm.querySelector('.form-status');
+    contactForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = contactForm.querySelector('button[type="submit"]');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+      if (statusEl) {
+        statusEl.textContent = '';
+        statusEl.classList.remove('form-status-success', 'form-status-error');
+      }
+
+      const data = Object.fromEntries(new FormData(contactForm).entries());
+
+      try {
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const result = await response.json().catch(() => ({}));
+
+        if (response.ok && result.ok) {
+          contactForm.reset();
+          if (statusEl) {
+            statusEl.textContent = 'Mensaje enviado. Te responderé pronto.';
+            statusEl.classList.add('form-status-success');
+          }
+        } else {
+          if (statusEl) {
+            statusEl.textContent = result.error || 'No se pudo enviar el mensaje. Intenta de nuevo.';
+            statusEl.classList.add('form-status-error');
+          }
+        }
+      } catch (err) {
+        if (statusEl) {
+          statusEl.textContent = 'Error de conexión. Intenta de nuevo en unos minutos.';
+          statusEl.classList.add('form-status-error');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+  }
 });
