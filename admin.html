@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Panel de Leads | Adriana Molina Zúñiga</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  body { background: var(--gray-50); }
+  .admin-topbar { background: var(--navy); color: #fff; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .admin-wrap { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
+  .login-box { max-width: 380px; margin: 80px auto; }
+  table.leads-table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+  table.leads-table th, table.leads-table td { padding: 12px 16px; text-align: left; font-size: 0.88rem; border-bottom: 1px solid var(--gray-100); vertical-align: top; }
+  table.leads-table th { background: var(--navy-tint); color: var(--navy); font-weight: 700; white-space: nowrap; }
+  table.leads-table td.message-cell { max-width: 320px; }
+  table.leads-table tr:hover td { background: var(--gray-50); }
+  .admin-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .lead-count { color: var(--ink-soft); font-size: 0.9rem; }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<div class="admin-topbar">
+  <div class="brand" style="color:#fff;">
+    <span class="brand-mark">AMZ</span>
+    <span>Panel de Leads</span>
+  </div>
+  <button id="logout-btn" class="btn btn-outline-light" style="display:none;">Cerrar sesión</button>
+</div>
+
+<div id="login-view" class="login-box">
+  <form id="login-form" class="card">
+    <h2 style="margin-bottom:8px;">Acceso privado</h2>
+    <p class="form-note" style="margin-bottom:20px;">Ingresa la contraseña de administración para ver los leads.</p>
+    <div class="form-field">
+      <label for="password">Contraseña</label>
+      <input type="password" id="password" name="password" required autofocus>
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Entrar</button>
+    <p class="form-status" role="status" aria-live="polite"></p>
+  </form>
+</div>
+
+<div id="leads-view" class="admin-wrap" style="display:none;">
+  <div class="admin-toolbar">
+    <div>
+      <h1 style="margin-bottom:4px;">Leads recibidos</h1>
+      <p class="lead-count" id="lead-count"></p>
+    </div>
+    <div class="btn-row">
+      <button id="refresh-btn" class="btn btn-outline">Actualizar</button>
+      <button id="csv-btn" class="btn btn-primary">Descargar CSV</button>
+    </div>
+  </div>
+  <div id="table-wrap"></div>
+</div>
+
+<script>
+  const loginView = document.getElementById('login-view');
+  const leadsView = document.getElementById('leads-view');
+  const logoutBtn = document.getElementById('logout-btn');
+  const loginForm = document.getElementById('login-form');
+  const loginStatus = loginForm.querySelector('.form-status');
+  const tableWrap = document.getElementById('table-wrap');
+  const leadCount = document.getElementById('lead-count');
+  let currentLeads = [];
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  function renderLeads(leads) {
+    currentLeads = leads;
+    leadCount.textContent = `${leads.length} lead${leads.length === 1 ? '' : 's'} en total`;
+
+    if (!leads.length) {
+      tableWrap.innerHTML = '<div class="card empty-state">Todavía no hay leads registrados.</div>';
+      return;
+    }
+
+    const rows = leads.map((l) => `
+      <tr>
+        <td>${formatDate(l.created_at)}</td>
+        <td>${escapeHtml(l.name)}</td>
+        <td><a href="mailto:${escapeHtml(l.email)}">${escapeHtml(l.email)}</a></td>
+        <td>${escapeHtml(l.org)}</td>
+        <td>${escapeHtml(l.phone)}</td>
+        <td>${escapeHtml(l.interest)}</td>
+        <td class="message-cell">${escapeHtml(l.message)}</td>
+      </tr>
+    `).join('');
+
+    tableWrap.innerHTML = `
+      <table class="leads-table">
+        <thead>
+          <tr><th>Fecha</th><th>Nombre</th><th>Correo</th><th>Organización</th><th>Teléfono</th><th>Motivo</th><th>Mensaje</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  async function loadLeads() {
+    const res = await fetch('/api/leads');
+    if (res.status === 401) {
+      showLogin();
+      return;
+    }
+    const data = await res.json();
+    renderLeads(data.leads || []);
+  }
+
+  function showLeads() {
+    loginView.style.display = 'none';
+    leadsView.style.display = 'block';
+    logoutBtn.style.display = 'inline-flex';
+    loadLeads();
+  }
+
+  function showLogin() {
+    leadsView.style.display = 'none';
+    logoutBtn.style.display = 'none';
+    loginView.style.display = 'block';
+  }
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginStatus.textContent = '';
+    loginStatus.className = 'form-status';
+    const password = document.getElementById('password').value;
+    try {
+      const res = await fetch('/api/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        loginForm.reset();
+        showLeads();
+      } else {
+        loginStatus.textContent = data.error || 'No se pudo iniciar sesión.';
+        loginStatus.classList.add('form-status-error');
+      }
+    } catch (err) {
+      loginStatus.textContent = 'Error de conexión. Intenta de nuevo.';
+      loginStatus.classList.add('form-status-error');
+    }
+  });
+
+  document.getElementById('refresh-btn').addEventListener('click', loadLeads);
+
+  logoutBtn.addEventListener('click', async () => {
+    await fetch('/api/admin-logout', { method: 'POST' });
+    showLogin();
+  });
+
+  document.getElementById('csv-btn').addEventListener('click', () => {
+    if (!currentLeads.length) return;
+    const headers = ['Fecha', 'Nombre', 'Correo', 'Organización', 'Teléfono', 'Motivo', 'Mensaje'];
+    const csvRows = currentLeads.map((l) => [
+      formatDate(l.created_at), l.name, l.email, l.org || '', l.phone || '', l.interest || '', (l.message || '').replace(/\n/g, ' '),
+    ].map((field) => `"${String(field).replace(/"/g, '""')}"`).join(','));
+    const csv = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Al cargar, intenta obtener leads directamente; si no hay sesión, muestra login.
+  loadLeads();
+</script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+import { insertLead } from './_lib/supabase.js';
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default async function handler(req, res) {
@@ -21,50 +23,19 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'El correo electrónico no es válido.' });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const toEmail = process.env.CONTACT_TO_EMAIL;
-
-  if (!apiKey || !toEmail) {
-    console.error('Faltan variables de entorno RESEND_API_KEY / CONTACT_TO_EMAIL');
-    return res.status(500).json({ error: 'El formulario todavía no está configurado. Escríbeme directamente por correo.' });
-  }
-
-  const bodyLines = [
-    `Nombre: ${name}`,
-    `Correo: ${email}`,
-    org ? `Organización: ${org}` : null,
-    phone ? `Teléfono: ${phone}` : null,
-    interest ? `Motivo de contacto: ${interest}` : null,
-    '',
-    'Mensaje:',
-    message,
-  ].filter(Boolean);
-
   try {
-    const resendRes = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Formulario web <onboarding@resend.dev>',
-        to: [toEmail],
-        reply_to: email,
-        subject: `Nuevo contacto desde la web: ${name}`,
-        text: bodyLines.join('\n'),
-      }),
+    await insertLead({
+      name,
+      email,
+      org: org || null,
+      phone: phone || null,
+      interest: interest || null,
+      message,
+      source: 'contacto',
     });
-
-    if (!resendRes.ok) {
-      const errBody = await resendRes.text();
-      console.error('Resend error:', resendRes.status, errBody);
-      return res.status(502).json({ error: 'No se pudo enviar el mensaje. Intenta de nuevo en unos minutos.' });
-    }
-
     return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error('Error inesperado en /api/contact:', err);
-    return res.status(500).json({ error: 'Ocurrió un error inesperado. Intenta de nuevo.' });
+    console.error('Error guardando lead:', err);
+    return res.status(500).json({ error: 'No se pudo guardar tu mensaje. Intenta de nuevo en unos minutos.' });
   }
 }
